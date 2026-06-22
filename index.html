@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cumcum & Düşmüş Melek: Aşk Senfonisi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #fdf2f8; font-family: 'Inter', sans-serif; }
+        #game-canvas { display: block; width: 100vw; height: 100vh; cursor: pointer; }
+        .modal { backdrop-filter: blur(8px); }
+    </style>
+</head>
+<body>
+
+    <div id="game-container" class="relative w-screen h-screen">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- UI -->
+        <div id="ui-layer" class="absolute top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none">
+            <div id="stats" class="hidden bg-white/80 p-4 rounded-2xl shadow-xl backdrop-blur-md border border-pink-100 pointer-events-auto">
+                <div class="flex gap-8">
+                    <div>
+                        <div class="text-xs font-bold text-pink-500 uppercase tracking-widest mb-1">Aşk Enerjisi</div>
+                        <div class="w-48 h-4 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="progress" class="h-full bg-pink-500 w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">Kalan Süre</div>
+                        <div id="timer" class="text-2xl font-black text-blue-600">30s</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Modal -->
+        <div id="start-modal" class="modal absolute inset-0 flex items-center justify-center bg-black/30">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-sm m-4 border-4 border-pink-200">
+                <div class="text-6xl mb-4">🦆✨💖</div>
+                <h1 class="text-3xl font-black text-pink-600 mb-2">Aşk Zamanı!</h1>
+                <p class="text-gray-600 mb-6">Cumcum, Düşmüş Melek'e ulaşmak için sabırsızlanıyor! Aşk enerjisi otomatik doluyor, keyfini çıkar.</p>
+                <button onclick="startGame()" class="bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95">
+                    Maceraya Başla!
+                </button>
+            </div>
+        </div>
+
+        <!-- Proposal Modal -->
+        <div id="proposal-modal" class="hidden modal absolute inset-0 flex items-center justify-center bg-black/40">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-md m-4 animate-in fade-in zoom-in duration-500">
+                <div id="modal-content">
+                    <div class="text-6xl mb-4">💍</div>
+                    <h2 class="text-3xl font-bold text-pink-600 mb-2">Beni Seçer Misin?</h2>
+                    <p class="text-gray-600 mb-6">Cumcum'un aşkı her engeli aştı ve kalbini Düşmüş Melek'e sundu.</p>
+                    <button onclick="marry()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full">EVET! 💖</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const startModal = document.getElementById('start-modal');
+        const proposalModal = document.getElementById('proposal-modal');
+        const progressBar = document.getElementById('progress');
+        const timerDisplay = document.getElementById('timer');
+        const stats = document.getElementById('stats');
+
+        let isRunning = false;
+        let score = 0;
+        let timeLeft = 30;
+        let gameTimer;
+        let duck = { x: 100, y: 300, vy: 0, grounded: false };
+        let items = [];
+
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function startGame() {
+            startModal.classList.add('hidden');
+            stats.classList.remove('hidden');
+            isRunning = true;
+            
+            gameTimer = setInterval(() => {
+                if (!isRunning) return;
+                timeLeft--;
+                timerDisplay.textContent = `${timeLeft}s`;
+                if (timeLeft <= 0) win();
+            }, 1000);
+
+            animate();
+        }
+
+        window.addEventListener('mousedown', () => { if(duck.grounded) { duck.vy = -15; duck.grounded = false; } });
+
+        function animate() {
+            if (!isRunning) return;
+
+            // Aşk enerjisi yavaş yavaş otomatik dolar
+            score += 0.35; 
+            progressBar.style.width = `${Math.min(score, 100)}%`;
+
+            duck.vy += 0.8;
+            duck.y += duck.vy;
+            if (duck.y > canvas.height - 150) { duck.y = canvas.height - 150; duck.vy = 0; duck.grounded = true; }
+
+            if (Math.random() < 0.03) {
+                items.push({ x: canvas.width, y: Math.random() * 200 + 100, type: Math.random() > 0.5 ? 'heart' : 'obstacle' });
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fce7f3';
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+            ctx.font = '50px sans-serif';
+            ctx.fillText('🦆', duck.x, duck.y);
+
+            items.forEach((item, index) => {
+                item.x -= 6;
+                ctx.fillText(item.type === 'heart' ? '💖' : '📦', item.x, item.y);
+
+                if (Math.hypot(duck.x - item.x, duck.y - item.y) < 40) {
+                    if (item.type === 'heart') {
+                        score += 5;
+                        items.splice(index, 1);
+                    } else {
+                        items.splice(index, 1);
+                    }
+                }
+            });
+
+            if (score >= 100) win();
+
+            requestAnimationFrame(animate);
+        }
+
+        function win() {
+            if (!isRunning) return;
+            isRunning = false;
+            clearInterval(gameTimer);
+            proposalModal.classList.remove('hidden');
+        }
+
+        function marry() {
+            document.getElementById('modal-content').innerHTML = `
+                <div class="text-8xl mb-4 animate-bounce">🎉</div>
+                <h2 class="text-3xl font-bold text-green-600">Mutlu Sonsuzluk!</h2>
+                <p class="text-gray-600 mt-2">Cumcum ve Düşmüş Melek artık birlikteler! 🦆💍😇</p>
+                <button onclick="location.reload()" class="mt-6 text-pink-500 underline">Tekrar Oyna</button>
+            `;
+        }
+    </script>
+</body>
+</html>
